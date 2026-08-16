@@ -1,0 +1,7 @@
+ID,employee_ID,leaveType,startDate,endDate,reason,status
+1,1,Casual,2026-08-20,2026-08-21,Personal work,Pending
+2,2,Sick,2026-08-15,2026-08-16,Not feeling well,Approved
+3,3,Annual,2026-08-25,2026-08-29,Family vacation,Pending
+4,4,Casual,2026-08-18,2026-08-18,Personal appointment,Rejected
+5,5,Annual,2026-09-01,2026-09-03,Travel plans,Approved
+

@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+
+    <title>Employee Leave Management</title>
+
+    <script
+        id="sap-ui-bootstrap"
+        src="https://ui5.sap.com/1.151.0/resources/sap-ui-core.js"
+        data-sap-ui-theme="sap_horizon"
+        data-sap-ui-libs="sap.m,sap.ui.table"
+        data-sap-ui-compatVersion="edge"
+        data-sap-ui-async="true">
+    </script>
+
+    <script>
+        sap.ui.getCore().attachInit(function () {
+
+            sap.ui.require([
+                "sap/ui/model/odata/v4/ODataModel",
+                "sap/m/App",
+                "sap/m/Page",
+                "sap/m/Table",
+                "sap/m/Column",
+                "sap/m/ColumnListItem",
+                "sap/m/Text",
+                "sap/m/Button",
+                "sap/m/Dialog",
+                "sap/m/Label",
+                "sap/m/Input",
+                "sap/m/DatePicker",
+                "sap/m/Select",
+                "sap/ui/core/Item",
+                "sap/m/TextArea",
+                "sap/m/MessageToast",
+                "sap/m/VBox",
+                "sap/m/HBox",
+                "sap/m/Toolbar",
+                "sap/m/ToolbarSpacer"
+            ], function (
+                ODataModel,
+                App,
+                Page,
+                Table,
+                Column,
+                ColumnListItem,
+                Text,
+                Button,
+                Dialog,
+                Label,
+                Input,
+                DatePicker,
+                Select,
+                Item,
+                TextArea,
+                MessageToast,
+                VBox,
+                HBox,
+                Toolbar,
+                ToolbarSpacer
+            ) {
+
+                /*
+                 * OData V4 model
+                 */
+                var oModel = new ODataModel({
+                    serviceUrl: "/leave/",
+                    synchronizationMode: "None",
+                    operationMode: "Server",
+                    autoExpandSelect: true
+                });
+
+
+                /*
+                 * Main table
+                 */
+                var oTable = new Table({
+                    growing: true,
+                    growingThreshold: 20,
+                    width: "100%"
+                });
+
+
+                oTable.addColumn(new Column({
+                    header: new Text({
+                        text: "ID"
+                    })
+                }));
+
+                oTable.addColumn(new Column({
+                    header: new Text({
+                        text: "Employee ID"
+                    })
+                }));
+
+                oTable.addColumn(new Column({
+                    header: new Text({
+                        text: "Leave Type"
+                    })
+                }));
+
+                oTable.addColumn(new Column({
+                    header: new Text({
+                        text: "Start Date"
+                    })
+                }));
+
+                oTable.addColumn(new Column({
+                    header: new Text({
+                        text: "End Date"
+                    })
+                }));
+
+                oTable.addColumn(new Column({
+                    header: new Text({
+                        text: "Reason"
+                    })
+                }));
+
+                oTable.addColumn(new Column({
+                    header: new Text({
+                        text: "Status"
+                    })
+                }));
+                oTable.addColumn(new Column({
+                    header: new Text({
+                        text: "Action"
+                    })
+                }));
+
+
+                /*
+                 * Table rows
+                 */
+                oTable.bindItems({
+                    path: "/LeaveRequests",
+
+                    template: new ColumnListItem({
+                        cells: [
+
+                            new Text({
+                                text: "{ID}"
+                            }),
+
+                            new Text({
+                                text: "{employee_ID}"
+                            }),
+
+                            new Text({
+                                text: "{leaveType}"
+                            }),
+
+                            new Text({
+                                text: "{startDate}"
+                            }),
+
+                            new Text({
+                                text: "{endDate}"
+                            }),
+
+                            new Text({
+                                text: "{reason}"
+                            }),
+
+                           new sap.m.ObjectStatus({
+    text: "{status}",
+    state: {
+        parts: [
+            {
+                path: "status"
+            }
+        ],
+        formatter: function (sStatus) {
+
+            if (sStatus === "Approved") {
+                return "Success";
+            }
+
+            if (sStatus === "Rejected") {
+                return "Error";
+            }
+
+            if (sStatus === "Pending") {
+                return "Warning";
+            }
+
+            return "None";
+        }
+    }
+}),
+new sap.m.HBox({
+    items: [
+
+        new sap.m.Button({
+            text: "Edit",
+            press: function (oEvent) {
+
+                var oContext = oEvent.getSource()
+                    .getParent()
+                    .getBindingContext();
+
+                editLeave(oContext);
+            }
+        }),
+
+        new sap.m.Button({
+            text: "Delete",
+            type: "Reject",
+
+            press: function (oEvent) {
+
+                var oContext = oEvent.getSource()
+                    .getParent()
+                    .getBindingContext();
+
+                if (!oContext) {
+                    window.alert("Unable to find the leave request.");
+                    return;
+                }
+
+                var bConfirmed = window.confirm(
+                    "Are you sure you want to delete this leave request?"
+                );
+
+                if (!bConfirmed) {
+                    return;
+                }
+
+                oContext.delete("$direct")
+                    .then(function () {
+
+                        window.alert(
+                            "Leave request deleted successfully"
+                        );
+
+                    })
+                    .catch(function (oError) {
+
+                        console.error("DELETE ERROR:", oError);
+
+                        window.alert(
+                            "Unable to delete the leave request: " +
+                            (oError.message || "Unknown error")
+                        );
+                    });
+            }
+        }),
+
+        new sap.m.Button({
+            text: "Approve",
+            type: "Accept",
+
+            press: function (oEvent) {
+
+                var oContext = oEvent.getSource()
+                    .getParent()
+                    .getBindingContext();
+
+                if (!oContext) {
+                    window.alert("Unable to find the leave request.");
+                    return;
+                }
+
+                if (oContext.getProperty("status") !== "Pending") {
+                    window.alert(
+                        "Only pending leave requests can be approved."
+                    );
+                    return;
+                }
+
+                oContext.setProperty("status", "Approved");
+
+                oContext.getModel()
+                    .submitBatch("$auto")
+                    .then(function () {
+
+                        window.alert(
+                            "Leave request approved successfully"
+                        );
+
+                        oContext.getModel().refresh();
+
+                    })
+                    .catch(function (oError) {
+
+                        console.error("APPROVE ERROR:", oError);
+
+                        window.alert(
+                            "Unable to approve the leave request: " +
+                            (oError.message || "Unknown error")
+                        );
+                    });
+            }
+        }),
+
+        new sap.m.Button({
+            text: "Reject",
+            type: "Reject",
+
+            press: function (oEvent) {
+
+                var oContext = oEvent.getSource()
+                    .getParent()
+                    .getBindingContext();
+
+                if (!oContext) {
+                    window.alert("Unable to find the leave request.");
+                    return;
+                }
+
+                if (oContext.getProperty("status") !== "Pending") {
+                    window.alert(
+                        "Only pending leave requests can be rejected."
+                    );
+                    return;
+                }
+
+                oContext.setProperty("status", "Rejected");
+
+                oContext.getModel()
+                    .submitBatch("$auto")
+                    .then(function () {
+
+                        window.alert(
+                            "Leave request rejected successfully"
+                        );
+
+                        oContext.getModel().refresh();
+
+                    })
+                    .catch(function (oError) {
+
+                        console.error("REJECT ERROR:", oError);
+
+                        window.alert(
+                            "Unable to reject the leave request: " +
+                            (oError.message || "Unknown error")
+                        );
+                    });
+            }
+        })
+
+    ]
+})
+    ]
+})
+});
+    
+    
+                /*
+                 * CREATE DIALOG
+                 */
+
+                var oEmployeeInput = new sap.m.Input({
+                    placeholder: "Enter employee ID",
+                    type: "Number",
+                    width: "100%"
+                });
+
+
+                var oLeaveType = new Select({
+                    width: "100%",
+                    selectedKey: "Casual",
+
+                    items: [
+                        new Item({
+                            key: "Casual",
+                            text: "Casual"
+                        }),
+                        new Item({
+                            key: "Sick",
+                            text: "Sick"
+                        }),
+                        new Item({
+                            key: "Annual",
+                            text: "Annual"
+                        })
+                    ]
+                });
+
+
+                var oStartDate = new DatePicker({
+                    width: "100%",
+                    valueFormat: "yyyy-MM-dd",
+                    displayFormat: "dd MMM yyyy"
+                });
+
+
+                var oEndDate = new DatePicker({
+                    width: "100%",
+                    valueFormat: "yyyy-MM-dd",
+                    displayFormat: "dd MMM yyyy"
+                });
+
+
+                var oReason = new TextArea({
+                    width: "100%",
+                    rows: 4,
+                    placeholder: "Enter reason for leave"
+                });
+
+
+                var oDialog = new Dialog({
+                    title: "Create Leave Request",
+                    contentWidth: "450px",
+
+                    content: new VBox({
+                        width: "100%",
+                        class: "sapUiMediumMargin",
+
+                        items: [
+
+                            new Label({
+                                text: "Employee ID",
+                                required: true
+                            }),
+
+                            oEmployeeInput,
+
+                            new Label({
+                                text: "Leave Type",
+                                required: true
+                            }),
+
+                            oLeaveType,
+
+                            new Label({
+                                text: "Start Date",
+                                required: true
+                            }),
+
+                            oStartDate,
+
+                            new Label({
+                                text: "End Date",
+                                required: true
+                            }),
+
+                            oEndDate,
+
+                            new Label({
+                                text: "Reason",
+                                required: true
+                            }),
+
+                            oReason
+                        ]
+                    }),
+
+                    beginButton: new Button({
+                        text: "Create",
+                        type: "Emphasized",
+
+                        press: function () {
+
+                            var employeeID =
+                                parseInt(oEmployeeInput.getValue(), 10);
+
+                            var leaveType =
+                                oLeaveType.getSelectedKey();
+
+                            var startDate =
+                                oStartDate.getValue();
+
+                            var endDate =
+                                oEndDate.getValue();
+
+                            var reason =
+                                oReason.getValue();
+
+
+                            /*
+                             * Validation
+                             */
+
+                            if (!employeeID) {
+                                MessageToast.show(
+                                    "Please enter Employee ID"
+                                );
+                                return;
+                            }
+
+                            if (!startDate) {
+                                MessageToast.show(
+                                    "Please select Start Date"
+                                );
+                                return;
+                            }
+
+                            if (!endDate) {
+                                MessageToast.show(
+                                    "Please select End Date"
+                                );
+                                return;
+                            }
+
+                            if (!reason) {
+                                MessageToast.show(
+                                    "Please enter a reason"
+                                );
+                                return;
+                            }
+
+
+                            /*
+                             * Create through OData V4
+                             */
+
+                            var oBinding =
+                                oTable.getBinding("items");
+
+
+                            var oBinding = oTable.getBinding("items");
+
+/*
+ * Generate the next Leave Request ID
+ */
+                            var aContexts = oBinding.getCurrentContexts();
+
+                            var maxID = 0;
+
+                            aContexts.forEach(function (oContext) {
+
+                                var id = parseInt(
+                                    oContext.getProperty("ID"),
+                                    10
+                                );
+
+                                if (!isNaN(id) && id > maxID) {
+                                    maxID = id;
+                                }
+                            });
+
+                            var nextID = maxID + 1;
+
+
+/*
+ * Create the new leave request
+ */
+                            var oContext = oBinding.create({
+
+                                ID: nextID,
+
+                                employee_ID: employeeID,
+
+                                leaveType: leaveType,
+
+                                startDate: startDate,
+
+                                endDate: endDate,
+
+                                reason: reason,
+
+                                status: "Pending"
+                            });
+
+
+                            oContext.created()
+                                .then(function () {
+
+                                    MessageToast.show(
+                                        "Leave request created successfully"
+                                    );
+
+                                    oDialog.close();
+
+                                    oEmployeeInput.setValue("");
+
+                                    oLeaveType.setSelectedKey(
+                                        "Casual"
+                                    );
+
+                                    oStartDate.setValue("");
+
+                                    oEndDate.setValue("");
+
+                                    oReason.setValue("");
+
+                                })
+                                .catch(function (error) {
+
+                                    MessageToast.show(
+                                        "Error creating leave request"
+                                    );
+
+                                    console.error(
+                                        error
+                                    );
+                                });
+                        }
+                    }),
+
+                    endButton: new Button({
+                        text: "Cancel",
+
+                        press: function () {
+                            oDialog.close();
+                        }
+                    })
+                });
+
+
+                /*
+                 * CREATE BUTTON
+                 */
+
+                var oCreateButton = new Button({
+
+                    text: "Create Leave Request",
+
+                    type: "Emphasized",
+
+                    icon: "sap-icon://add",
+
+                    press: function () {
+
+                        oDialog.open();
+
+                    }
+                });
+
+
+                /*
+                 * Toolbar
+                 */
+
+                var oToolbar = new Toolbar({
+
+                    content: [
+
+                        new Text({
+                            text: "Leave Requests"
+                        }),
+
+                        new ToolbarSpacer(),
+
+                        oCreateButton
+                    ]
+                });
+
+
+                /*
+                 * PAGE
+                 */
+
+                var oPage = new Page({
+
+                    title: "Employee Leave Management",
+
+                    content: [
+
+                        oToolbar,
+
+                        oTable
+                    ]
+                });
+
+
+                /*
+                 * APP
+                 */
+
+                var oApp = new App();
+
+                oApp.setModel(oModel);
+
+                oApp.addPage(oPage);
+
+                oApp.placeAt("content");
+
+            });
+            function validateLeaveData(oData) {
+
+    if (!oData.employee_ID) {
+        window.alert("Employee ID is required.");
+        return false;
+    }
+
+    if (!oData.leaveType) {
+        window.alert("Leave Type is required.");
+        return false;
+    }
+
+    if (!oData.startDate) {
+        window.alert("Start Date is required.");
+        return false;
+    }
+
+    if (!oData.endDate) {
+        window.alert("End Date is required.");
+        return false;
+    }
+
+    if (oData.endDate < oData.startDate) {
+        window.alert("End Date cannot be before Start Date.");
+        return false;
+    }
+
+    if (!oData.reason || !oData.reason.trim()) {
+        window.alert("Reason is required.");
+        return false;
+    }
+
+    return true;
+}
+function editLeave(oContext) {
+
+    var oModel = oContext.getModel();
+
+    oContext.requestObject().then(function (oData) {
+
+        var oEmployeeInput = new sap.m.Input({
+            value: oData.employee_ID,
+            type: "Number",
+            width: "100%"
+        });
+
+        var oLeaveType = new sap.m.Select({
+            selectedKey: oData.leaveType,
+            width: "100%",
+            items: [
+                new sap.ui.core.Item({
+                    key: "Casual",
+                    text: "Casual"
+                }),
+                new sap.ui.core.Item({
+                    key: "Sick",
+                    text: "Sick"
+                }),
+                new sap.ui.core.Item({
+                    key: "Annual",
+                    text: "Annual"
+                })
+            ]
+        });
+
+        var oStartDate = new sap.m.Input({
+            value: oData.startDate,
+            width: "100%"
+        });
+
+        var oEndDate = new sap.m.Input({
+            value: oData.endDate,
+            width: "100%"
+        });
+
+        var oReason = new sap.m.TextArea({
+            value: oData.reason,
+            width: "100%"
+        });
+
+        var oDialog = new sap.m.Dialog({
+            title: "Update Leave Request",
+
+            content: [
+                new sap.m.Label({
+                    text: "Employee ID"
+                }),
+                oEmployeeInput,
+
+                new sap.m.Label({
+                    text: "Leave Type"
+                }),
+                oLeaveType,
+
+                new sap.m.Label({
+                    text: "Start Date"
+                }),
+                oStartDate,
+
+                new sap.m.Label({
+                    text: "End Date"
+                }),
+                oEndDate,
+
+                new sap.m.Label({
+                    text: "Reason"
+                }),
+                oReason
+            ],
+
+            beginButton: new sap.m.Button({
+                text: "Update",
+
+                press: function () {
+
+                    oContext.setProperty(
+                        "employee_ID",
+                        parseInt(oEmployeeInput.getValue())
+                    );
+
+                    oContext.setProperty(
+                        "leaveType",
+                        oLeaveType.getSelectedKey()
+                    );
+
+                    oContext.setProperty(
+                        "startDate",
+                        oStartDate.getValue()
+                    );
+
+                    oContext.setProperty(
+                        "endDate",
+                        oEndDate.getValue()
+                    );
+
+                    oContext.setProperty(
+                        "reason",
+                        oReason.getValue()
+                    );
+
+                    oModel.submitBatch("$auto").then(function () {
+
+                        oDialog.close();
+
+                        oModel.refresh();
+
+                        sap.m.MessageToast.show(
+                            "Leave request updated successfully"
+                        );
+
+                    });
+                }
+            }),
+
+            endButton: new sap.m.Button({
+                text: "Cancel",
+
+                press: function () {
+                    oDialog.close();
+                }
+            })
+        });
+
+        oDialog.open();
+    });
+}
+            })
+
+        oDialog.open();
+    </script>
+
+</head>
+
+
+<body class="sapUiBody sapUiSizeCompact">
+
+    <div id="content"></div>
+
+</body>
+
+</html>
