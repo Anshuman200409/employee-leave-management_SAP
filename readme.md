@@ -1,22 +1,83 @@
-# Getting Started
+# Employee Leave Management – SAP CAP & Fiori
 
-Welcome to your new CAP project.
+A full-stack Employee Leave Management application built using **SAP CAP (Cloud Application Programming Model)**, **SAPUI5/Fiori**, **OData**, and **SQLite**.
 
-It contains these folders and files, following our recommended project layout:
+The application allows users to create, view, edit, delete, approve, and reject employee leave requests through a Fiori-based user interface.
 
-File or Folder | Purpose
----------|----------
-`app/` | content for UI frontends goes here
-`db/` | your domain models and data go here
-`srv/` | your service models and code go here
-`readme.md` | this getting started guide
+---
 
-## Next Steps
+## 🚀 Features
 
-- Open a new terminal and run `cds watch`
-- (in VS Code simply choose _**Terminal** > Run Task > cds watch_)
-- Start with your domain model, in a CDS file in `db/`
+- Create a new leave request
+- View all leave requests
+- Edit existing leave requests
+- Delete leave requests
+- Approve leave requests
+- Reject leave requests
+- Display leave status
+- Employee ID and leave type management
+- Start date and end date management
+- Leave reason management
+- OData-based backend communication
+- SQLite database for local development
+- CSV-based initial/seed data
+- SAPUI5/Fiori frontend
+- SAP CAP backend
 
-## Learn More
+---
 
-Learn more at <https://cap.cloud.sap>.
+## 🛠️ Technology Stack
+
+### Frontend
+- SAPUI5
+- Fiori
+- JavaScript
+- HTML
+- CSS
+
+### Backend
+- SAP CAP
+- Node.js
+- OData
+
+### Database
+- SQLite
+- CSV seed data
+
+### Development Environment
+- SAP Business Application Studio
+- Git
+- GitHub
+
+---
+
+## 📁 Project Structure
+
+```text
+employee-leave-management/
+│
+├── app/
+│   └── leave-ui/
+│       ├── webapp/
+│       │   ├── index.html
+│       │   ├── Component.js
+│       │   ├── manifest.json
+│       │   └── i18n/
+│       │
+│       ├── package.json
+│       └── ui5.yaml
+│
+├── db/
+│   ├── data/
+│   │   ├── employee.leave-Employees.csv
+│   │   └── employee.leave-LeaveRequests.csv
+│   │
+│   └── schema.cds
+│
+├── srv/
+│   └── leave-service.cds
+│
+├── package.json
+├── package-lock.json
+├── .gitignore
+└── readme.md
